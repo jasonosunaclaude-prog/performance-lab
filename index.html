@@ -207,7 +207,11 @@ textarea{resize:vertical;min-height:64px}
 (() => {
 "use strict";
 const CFG = window.PERFLAB_CONFIG;
-const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey);
+const DEMO = !!CFG.demo;
+const sb = DEMO ? null : window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey);
+const DEMO_KEY = "perflab.preview.days";
+const demoRead = () => { try { return JSON.parse(localStorage.getItem(DEMO_KEY) || "{}"); } catch { return {}; } };
+const demoWrite = m => { try { localStorage.setItem(DEMO_KEY, JSON.stringify(m)); } catch {} };
 const ICONS = {
   today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>',
   log:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
@@ -275,6 +279,7 @@ function applyReal(map){
 }
 function storeNote(t){ document.getElementById("storeNote").textContent = t; }
 async function loadDays(){
+  if (DEMO){ storeNote("Preview mode: saved in this browser only"); applyReal(demoRead()); return; }
   const from = addDays(todayKey(), -120);
   const { data, error } = await sb.from("days").select("*").gte("date", from).order("date");
   if (error){ storeNote("Couldn't load your log"); flash("Couldn't load your log. Refresh to try again.", true); return; }
@@ -283,11 +288,13 @@ async function loadDays(){
   applyReal(map);
 }
 async function saveDay(day){
+  if (DEMO){ const m = demoRead(); m[day.date] = day; demoWrite(m); applyReal(m); return; }
   const { error } = await sb.from("days").upsert({...toRow(day), user_id: state.session.user.id}, { onConflict: "user_id,date" });
   if (error) throw error;
   const cur = state.example ? {} : {...state.days}; cur[day.date] = day; applyReal(cur);
 }
 async function deleteDay(k){
+  if (DEMO){ const m = demoRead(); delete m[k]; demoWrite(m); applyReal(m); return; }
   const { error } = await sb.from("days").delete().eq("date", k);
   if (error) throw error;
   const cur = {...state.days}; delete cur[k]; applyReal(cur);
@@ -582,6 +589,7 @@ async function send(q){
   const c = COACHES.find(x=>x.id===state.coach);
   const turns = state.chats[c.id] = state.chats[c.id] || [];
   turns.push({role:"user", content:q});
+  if (DEMO){ turns.push({role:"assistant", content:"Coaches are off in preview mode. On the live site they answer from your saved log once the ANTHROPIC_API_KEY secret is set in Supabase."}); renderMsgs(); return; }
   state.busy = true; renderMsgs();
   const box = document.getElementById("msgs"); const bubble = document.createElement("div");
   bubble.className = "msg a"; bubble.textContent = "Thinking…"; box.appendChild(bubble); box.scrollTop = box.scrollHeight;
@@ -644,7 +652,8 @@ window.addEventListener("hashchange", () => { window.scrollTo(0,0); render(); })
 /* ---------- auth ---------- */
 function showApp(on){ document.getElementById("app").hidden = !on; document.getElementById("auth").hidden = on; }
 let loadedFor = null;
-sb.auth.onAuthStateChange((_ev, session) => {
+if (DEMO){ state.session = {user:{id:"preview", email:"preview"}}; document.getElementById("signOut").hidden = true; showApp(true); render(); loadDays(); }
+else sb.auth.onAuthStateChange((_ev, session) => {
   state.session = session;
   if (session){
     showApp(true);
@@ -661,7 +670,7 @@ document.getElementById("authForm").onsubmit = async e => {
   if (error){ msg.className = "toast err"; msg.textContent = error.status === 429 ? "Too many sign-in emails. Wait a minute and try again." : "Couldn't send the link. Check the address and try again."; }
   else msg.textContent = `Check ${email} for a sign-in link.`;
 };
-document.getElementById("signOut").onclick = () => sb.auth.signOut();
+document.getElementById("signOut").onclick = () => sb && sb.auth.signOut();
 })();
 </script>
 </body>

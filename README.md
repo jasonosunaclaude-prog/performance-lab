@@ -12,7 +12,7 @@ A training and recovery log with a daily readiness score, trend charts and four 
 
 1. **Anthropic key for the coaches.** In Supabase, go to Edge Functions → Secrets and add `ANTHROPIC_API_KEY`. Optionally add `COACH_MODEL` to override the default model.
 2. **Sign-in redirect.** Go to Authentication → URL Configuration. Set **Site URL** to wherever you host the app, and add that URL (plus `http://localhost:8000` for local testing) under Redirect URLs.
-3. **Run locally:** `python3 -m http.server 8000`, then open http://localhost:8000.
+3. **Preview locally:** `python3 dev-server.py`, then open http://localhost:8000. Preview mode skips sign-in, saves to your browser only and switches the coaches off. To test real sign-in locally, use `python3 -m http.server 8000` instead.
 4. **Deploy:** upload `index.html` and `config.js` to any static host, such as Netlify, Vercel, Cloudflare Pages or GitHub Pages.
 
 The publishable key in `config.js` is meant to be public. Never put the service-role key or the Anthropic key in front-end files.
