@@ -307,7 +307,7 @@ async function doAuth(mode){
   if(!email||pw.length<6){authMsg='Enter your email and a password of at least 6 characters.';authBad=true;showAuthKeep(email);return}
   authMsg='Working…';authBad=false;showAuthKeep(email);
   try{
-    const r=mode==='up'?await sb.auth.signUp({email,password:pw}):await sb.auth.signInWithPassword({email,password:pw});
+    const r=mode==='up'?await sb.auth.signUp({email,password:pw,options:{emailRedirectTo:location.origin+location.pathname.replace(/index\.html$/,'')}}):await sb.auth.signInWithPassword({email,password:pw});
     if(r.error){authMsg=r.error.message;authBad=true;showAuthKeep(email);return}
     if(r.data&&r.data.session){authMsg='';await startSession(r.data.session)}
     else{authMsg='Check your email to confirm the account, then sign in.';authBad=false;showAuthKeep(email)}
